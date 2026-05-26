@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -16,19 +17,75 @@ app.get('/health', (req, res) => {
 app.post('/api/design', async (req, res) => {
   try {
     const { prompt, type = 'image', model } = req.body;
-    // In real implementation, call FAL or other model API
-    // For now, return a mock response
-    res.json({
-      success: true,
-      data: {
-        id: `design_${Date.now()}`,
-        prompt,
-        type,
-        model: model || 'default',
-        resultUrl: `https://example.com/mock-${type}-${Date.now()}.png`,
-        createdAt: new Date().toISOString()
+    
+    if (type === 'image') {
+      // Call FAL API for image generation
+      const falKey = process.env.FAL_API_KEY;
+      if (!falKey) {
+        return res.status(500).json({ success: false, error: 'FAL API key not configured' });
       }
-    });
+      
+      // Using fast-sdxl model for speed and quality
+      const falModel = 'fal-ai/fast-sdxl';
+      const falUrl = `https://fal.ai/run/${falModel}`;
+      
+      const response = await fetch(falUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Key ${falKey}`
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          // Optional parameters
+          image_size: { width: 1024, height: 1024 }, // square
+          num_inference_steps: 20,
+          guidance_scale: 7.5,
+          num_images: 1,
+          enable_safety_checker: true
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL API error: ${response.status} ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      // FAL returns images array with url
+      const imageUrl = result.images?.[0]?.url;
+      
+      if (!imageUrl) {
+        throw new Error('No image URL returned from FAL API');
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          id: `design_${Date.now()}`,
+          prompt,
+          type,
+          model: falModel,
+          resultUrl: imageUrl,
+          createdAt: new Date().toISOString()
+        }
+      });
+    } else {
+      // For non-image types (3D, video, etc.) return placeholder for now
+      // In future implementation, integrate respective models
+      res.json({
+        success: true,
+        data: {
+          id: `design_${Date.now()}`,
+          prompt,
+          type,
+          model: model || 'default',
+          resultUrl: `https://example.com/mock-${type}-${Date.now()}.png`,
+          createdAt: new Date().toISOString()
+        }
+      });
+    }
   } catch (error) {
     console.error('Design endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -94,7 +151,7 @@ app.post('/api/marketing', async (req, res) => {
         },
         createdAt: new Date().toISOString()
       }
-    });
+    );
   } catch (error) {
     console.error('Marketing endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -127,7 +184,7 @@ app.post('/api/compliance', async (req, res) => {
         summary: allPass ? '모든 기본 규제 요건을 충족합니다.' : '일부 항목에서 검토가 필요합니다.',
         checkedAt: new Date().toISOString()
       }
-    );
+    });
   } catch (error) {
     console.error('Compliance endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
