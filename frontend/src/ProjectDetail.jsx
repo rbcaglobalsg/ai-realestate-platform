@@ -8,6 +8,10 @@ const ProjectDetail = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // State for AI design generation
+  const [designImageUrl, setDesignImageUrl] = useState(null);
+  const [designLoading, setDesignLoading] = useState(false);
+  const [designError, setDesignError] = useState('');
 
   useEffect(() => {
     // Mock data based on ID
@@ -67,6 +71,42 @@ const ProjectDetail = () => {
     setLoading(false);
   }, [id]);
 
+  const handleGenerateDesign = async () => {
+    if (!project) return;
+    setDesignLoading(true);
+    setDesignError('');
+    setDesignImageUrl(null);
+    try {
+      // Use project description as prompt, or fallback to a generic prompt
+      const prompt = project.description || 'A beautiful modern building';
+      const response = await fetch('/api/design', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          type: 'image'
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate design');
+      }
+      const data = await response.json();
+      if (data.success && data.data && data.data.resultUrl) {
+        setDesignImageUrl(data.data.resultUrl);
+      } else {
+        throw new Error('Invalid response from design API');
+      }
+    } catch (err) {
+      console.error('Design generation error:', err);
+      setDesignError(err.message || 'Unknown error');
+    } finally {
+      setDesignLoading(false);
+    }
+  };
+
   if (loading) return <p>Loading project details...</p>;
   if (error) return <div className="error">{error}</div>;
   if (!project) return <p>No project data</p>;
@@ -98,7 +138,7 @@ const ProjectDetail = () => {
       <div className="tab-content">
         {/* Overview Tab */}
         <section className="tab-panel active">
-          <h3>프로젝트 개요</section>
+          <h3>프로젝트 개요</h3>
           <p>{project.description}</p>
           <div className="info-grid">
             <div className="info-item">
@@ -124,17 +164,32 @@ const ProjectDetail = () => {
           </div>
         </section>
 
-        {/* Design Tab - placeholder */}
+        {/* Design Tab */}
         <section className="tab-panel">
           <h3>AI 설계 생성</h3>
           <p>AI를 이용하여 프로젝트의 설계안을 자동으로 생성합니다.</p>
           <div className="ai-design-controls">
-            <button className="btn-primary">AI로 설계 생성하기</button>
+            <button 
+              className="btn-primary"
+              onClick={handleGenerateDesign}
+              disabled={designLoading}
+            >
+              {designLoading ? '생성 중...' : 'AI로 설계 생성하기'}
+            </button>
             <button className="btn-secondary">고급 옵션</button>
           </div>
           <div className="design-preview">
-            <p>설계 미리보기가 여기에 표시됩니다.</p>
-            {/* In real implementation, show generated images/3D models */}
+            {designLoading && <p>AI가 설계를 생성 중입니다...</p>}
+            {designError && <p className="error">오류: {designError}</p>}
+            {designImageUrl ? (
+              <img 
+                src={designImageUrl} 
+                alt="Generated design" 
+                style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
+              />
+            ) : (
+              <p>설계 미리보기가 여기에 표시됩니다.</p>
+            )}
           </div>
         </section>
 

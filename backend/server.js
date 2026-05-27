@@ -1,8 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { fal } = require('@fal-ai/client');
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Configure FAL client
+fal.config({ credentials: process.env.FAL_API_KEY });
 
 app.use(cors());
 app.use(express.json());
@@ -16,19 +20,55 @@ app.get('/health', (req, res) => {
 app.post('/api/design', async (req, res) => {
   try {
     const { prompt, type = 'image', model } = req.body;
-    // In real implementation, call FAL or other model API
-    // For now, return a mock response
-    res.json({
-      success: true,
-      data: {
-        id: `design_${Date.now()}`,
-        prompt,
-        type,
-        model: model || 'default',
-        resultUrl: `https://example.com/mock-${type}-${Date.now()}.png`,
-        createdAt: new Date().toISOString()
+
+    if (type === 'image') {
+      // Call FAL API for image generation
+      const falModel = 'fal-ai/fast-sdxl';
+
+      const result = await fal.subscribe(falModel, {
+        input: {
+          prompt: prompt,
+          image_size: { width: 1024, height: 1024 },
+          num_inference_steps: 20,
+          guidance_scale: 7.5,
+          num_images: 1,
+          enable_safety_checker: true
+        },
+        logs: true,
+      });
+
+      const imageUrl = result.data?.images?.[0]?.url;
+
+      if (!imageUrl) {
+        throw new Error('No image URL returned from FAL API');
       }
-    });
+
+      res.json({
+        success: true,
+        data: {
+          id: `design_${Date.now()}`,
+          prompt,
+          type,
+          model: falModel,
+          resultUrl: imageUrl,
+          createdAt: new Date().toISOString()
+        }
+      });
+    } else {
+      // For non-image types (3D, video, etc.) return placeholder for now
+      // In future implementation, integrate respective models
+      res.json({
+        success: true,
+        data: {
+          id: `design_${Date.now()}`,
+          prompt,
+          type,
+          model: model || 'default',
+          resultUrl: `https://example.com/mock-${type}-${Date.now()}.png`,
+          createdAt: new Date().toISOString()
+        }
+      });
+    }
   } catch (error) {
     console.error('Design endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -43,7 +83,7 @@ app.post('/api/finance', async (req, res) => {
     const totalCost = (landCost || 0) + (constructionCost || 0);
     const profit = (expectedSalePrice || 0) - totalCost;
     const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
-    
+
     res.json({
       success: true,
       data: {
@@ -60,7 +100,7 @@ app.post('/api/finance', async (req, res) => {
         },
         analysisDate: new Date().toISOString()
       }
-    );
+    });
   } catch (error) {
     console.error('Finance endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -94,7 +134,7 @@ app.post('/api/marketing', async (req, res) => {
         },
         createdAt: new Date().toISOString()
       }
-    );
+    });
   } catch (error) {
     console.error('Marketing endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -112,9 +152,9 @@ app.post('/api/compliance', async (req, res) => {
       { id: 'setback', name: '이격거리 기준', status: 'pass', description: '건물 간 이격거리가 법적 기준을 충족합니다.' },
       { id: 'env', name: '환경영향평가', status: 'info', description: '소규모 프로젝트로 환경영향평가는 면제 대상입니다.' }
     ];
-    
+
     const allPass = checks.every(c => c.status === 'pass' || c.status === 'info');
-    
+
     res.json({
       success: true,
       data: {
@@ -122,12 +162,11 @@ app.post('/api/compliance', async (req, res) => {
         projectType,
         landArea,
         buildingHeight,
-        complianceChecks: checks,
-        overallStatus: allPass ? 'pass' : 'warning',
-        summary: allPass ? '모든 기본 규제 요건을 충족합니다.' : '일부 항목에서 검토가 필요합니다.',
-        checkedAt: new Date().toISOString()
+        checks,
+        allPass,
+        createdAt: new Date().toISOString()
       }
-    );
+    });
   } catch (error) {
     console.error('Compliance endpoint error:', error);
     res.status(500).json({ success: false, error: error.message });
