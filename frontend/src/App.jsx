@@ -1,30 +1,22 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Dashboard from './Dashboard';
-import NewProject from './NewProject';
-import ProjectDetail from './ProjectDetail';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import MapPage from './pages/MapPage';
+import HomePage from './pages/HomePage';
+import PropertyDetailPage from './pages/PropertyDetailPage';
 
-function App() {
+export default function App() {
   return (
-    <Router>
-      <div className="App">
-        <header className="app-header">
-          <h1>AI Real Estate Platform</h1>
-          <nav>
-            <Link to="/">Dashboard</Link>
-            <Link to="/new-project">New Project</Link>
-          </nav>
-        </header>
-        <main>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/new-project" element={<NewProject />} />
-            <Route path="/project/:id" element={<ProjectDetail />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="/property/:id" element={<PropertyDetailPage />} />
+      </Route>
+    </Routes>
   );
 }
-
-export default App;
