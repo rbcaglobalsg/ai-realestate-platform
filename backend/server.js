@@ -15,6 +15,10 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+// Health check (api prefix)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Design endpoint - text to image/3D placeholder
 app.post('/api/design', async (req, res) => {
