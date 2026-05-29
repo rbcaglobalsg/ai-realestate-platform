@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const NewProject = () => {
+interface FormData {
+  name: string;
+  description: string;
+  landArea: string;
+  buildingHeight: string;
+  expectedFloors: string;
+  landCost: string;
+  constructionCost: string;
+  expectedSalePrice: string;
+  loanRate: string;
+  loanTerm: string;
+}
+
+const NewProject: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
     landArea: '',
@@ -13,18 +26,20 @@ const NewProject = () => {
     constructionCost: '',
     expectedSalePrice: '',
     loanRate: '',
-    loanTerm: ''
+    loanTerm: '',
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -32,7 +47,7 @@ const NewProject = () => {
     try {
       // In real app, call backend API to create project
       // For now, simulate success
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       // Generate a mock project ID
       const projectId = `proj_${Date.now()}`;
       navigate(`/project/${projectId}`);
@@ -158,7 +173,11 @@ const NewProject = () => {
           <button type="submit" disabled={loading}>
             {loading ? '생성 중...' : '프로젝트 생성'}
           </button>
-          <button type="button" onClick={() => navigate('/')} className="btn-secondary">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn-secondary"
+          >
             취소
           </button>
         </div>

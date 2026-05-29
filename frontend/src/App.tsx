@@ -4,7 +4,7 @@ import Dashboard from './Dashboard';
 import NewProject from './NewProject';
 import ProjectDetail from './ProjectDetail';
 
-function App() {
+function App(): React.ReactElement {
   return (
     <Router>
       <div className="App">

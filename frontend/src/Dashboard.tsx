@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-const Dashboard = () => {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+  status: string;
+}
+
+const Dashboard: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Mock data for now
     setProjects([
       { id: '1', name: '해변가 주택 단지', createdAt: '2026-05-20', status: 'completed' },
       { id: '2', name: '도심 오피스 빌딩', createdAt: '2026-05-15', status: 'in-progress' },
-      { id: '3', name: '전원주택 마을', createdAt: '2026-05-10', status: 'planning' }
+      { id: '3', name: '전원주택 마을', createdAt: '2026-05-10', status: 'planning' },
     ]);
     setLoading(false);
   }, []);
@@ -21,7 +28,9 @@ const Dashboard = () => {
     <div className="dashboard">
       <h2>내 프로젝트</h2>
       {projects.length === 0 ? (
-        <p>아직 프로젝트가 없습니다. <Link to="/new-project">새 프로젝트 시작하기</Link></p>
+        <p>
+          아직 프로젝트가 없습니다. <Link to="/new-project">새 프로젝트 시작하기</Link>
+        </p>
       ) : (
         <>
           <table>
@@ -34,14 +43,12 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {projects.map(p => (
+              {projects.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.createdAt}</td>
                   <td>
-                    <span className={`status-${p.status.toLowerCase()}`}>
-                      {p.status}
-                    </span>
+                    <span className={`status-${p.status.toLowerCase()}`}>{p.status}</span>
                   </td>
                   <td>
                     <Link to={`/project/${p.id}`}>상세 보기</Link>

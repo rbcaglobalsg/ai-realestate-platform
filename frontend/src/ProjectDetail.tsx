@@ -1,69 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 
-const ProjectDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  landArea: number;
+  buildingHeight: number;
+  expectedFloors: number;
+  landCost: number;
+  constructionCost: number;
+  expectedSalePrice: number;
+  loanRate: number;
+  loanTerm: number;
+  createdAt: string;
+  status: string;
+}
+
+const mockProjects: Record<string, Project> = {
+  '1': {
+    id: '1',
+    name: '해변가 주택 단지',
+    description: '해변가에 위치한 럭셔리 주택 단지 프로젝트',
+    landArea: 5000,
+    buildingHeight: 15,
+    expectedFloors: 5,
+    landCost: 500000000,
+    constructionCost: 1500000000,
+    expectedSalePrice: 2500000000,
+    loanRate: 4.5,
+    loanTerm: 20,
+    createdAt: '2026-05-20',
+    status: 'completed',
+  },
+  '2': {
+    id: '2',
+    name: '도심 오피스 빌딩',
+    description: '중심 업무 지역에 위치한 스마트 오피스 빌딩',
+    landArea: 2000,
+    buildingHeight: 80,
+    expectedFloors: 20,
+    landCost: 3000000000,
+    constructionCost: 8000000000,
+    expectedSalePrice: 15000000000,
+    loanRate: 4.2,
+    loanTerm: 15,
+    createdAt: '2026-05-15',
+    status: 'in-progress',
+  },
+  '3': {
+    id: '3',
+    name: '전원주택 마을',
+    description: '자연 친화적인 전원주택 마을 개발 프로젝트',
+    landArea: 10000,
+    buildingHeight: 10,
+    expectedFloors: 2,
+    landCost: 2000000000,
+    constructionCost: 3000000000,
+    expectedSalePrice: 7000000000,
+    loanRate: 4.0,
+    loanTerm: 25,
+    createdAt: '2026-05-10',
+    status: 'planning',
+  },
+};
+
+const ProjectDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
   // State for AI design generation
-  const [designImageUrl, setDesignImageUrl] = useState(null);
-  const [designLoading, setDesignLoading] = useState(false);
-  const [designError, setDesignError] = useState('');
+  const [designImageUrl, setDesignImageUrl] = useState<string | null>(null);
+  const [designLoading, setDesignLoading] = useState<boolean>(false);
+  const [designError, setDesignError] = useState<string>('');
 
   useEffect(() => {
-    // Mock data based on ID
-    // In real app, fetch from backend API
-    const mockProjects = {
-      '1': {
-        id: '1',
-        name: '해변가 주택 단지',
-        description: '해변가에 위치한 럭셔리 주택 단지 프로젝트',
-        landArea: 5000,
-        buildingHeight: 15,
-        expectedFloors: 5,
-        landCost: 500000000,
-        constructionCost: 1500000000,
-        expectedSalePrice: 2500000000,
-        loanRate: 4.5,
-        loanTerm: 20,
-        createdAt: '2026-05-20',
-        status: 'completed'
-      },
-      '2': {
-        id: '2',
-        name: '도심 오피스 빌딩',
-        description: '중심 업무 지역에 위치한 스마트 오피스 빌딩',
-        landArea: 2000,
-        buildingHeight: 80,
-        expectedFloors: 20,
-        landCost: 3000000000,
-        constructionCost: 8000000000,
-        expectedSalePrice: 15000000000,
-        loanRate: 4.2,
-        loanTerm: 15,
-        createdAt: '2026-05-15',
-        status: 'in-progress'
-      },
-      '3': {
-        id: '3',
-        name: '전원주택 마을',
-        description: '자연 친화적인 전원주택 마을 개발 프로젝트',
-        landArea: 10000,
-        buildingHeight: 10,
-        expectedFloors: 2,
-        landCost: 2000000000,
-        constructionCost: 3000000000,
-        expectedSalePrice: 7000000000,
-        loanRate: 4.0,
-        loanTerm: 25,
-        createdAt: '2026-05-10',
-        status: 'planning'
-      }
-    };
-    if (mockProjects[id]) {
+    if (id && mockProjects[id]) {
       setProject(mockProjects[id]);
     } else {
       setError('프로젝트를 찾을 수 없습니다.');
@@ -77,7 +90,6 @@ const ProjectDetail = () => {
     setDesignError('');
     setDesignImageUrl(null);
     try {
-      // Use project description as prompt, or fallback to a generic prompt
       const prompt = project.description || 'A beautiful modern building';
       const response = await fetch('/api/design', {
         method: 'POST',
@@ -86,8 +98,8 @@ const ProjectDetail = () => {
         },
         body: JSON.stringify({
           prompt: prompt,
-          type: 'image'
-        })
+          type: 'image',
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -101,7 +113,7 @@ const ProjectDetail = () => {
       }
     } catch (err) {
       console.error('Design generation error:', err);
-      setDesignError(err.message || 'Unknown error');
+      setDesignError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setDesignLoading(false);
     }
@@ -119,7 +131,7 @@ const ProjectDetail = () => {
     <div className="project-detail">
       <div className="header">
         <h2>{project.name}</h2>
-        <div className="status-badge status-{project.status.toLowerCase()}">
+        <div className={`status-badge status-${project.status.toLowerCase()}`}>
           {project.status}
         </div>
         <Link to="/" className="btn-back">
@@ -143,23 +155,23 @@ const ProjectDetail = () => {
           <div className="info-grid">
             <div className="info-item">
               <label>생성일</label>
-              <value>{project.createdAt}</value>
+              <span>{project.createdAt}</span>
             </div>
             <div className="info-item">
               <label>현재 상태</label>
-              <value>{project.status}</value>
+              <span>{project.status}</span>
             </div>
             <div className="info-item">
               <label>대지면적</label>
-              <value>{project.landArea?.toLocaleString()} ㎡</value>
+              <span>{project.landArea?.toLocaleString()} ㎡</span>
             </div>
             <div className="info-item">
               <label>건물 높이</label>
-              <value>{project.buildingHeight} m</value>
+              <span>{project.buildingHeight} m</span>
             </div>
             <div className="info-item">
               <label>예상 층수</label>
-              <value>{project.expectedFloors} 층</value>
+              <span>{project.expectedFloors} 층</span>
             </div>
           </div>
         </section>
@@ -169,7 +181,7 @@ const ProjectDetail = () => {
           <h3>AI 설계 생성</h3>
           <p>AI를 이용하여 프로젝트의 설계안을 자동으로 생성합니다.</p>
           <div className="ai-design-controls">
-            <button 
+            <button
               className="btn-primary"
               onClick={handleGenerateDesign}
               disabled={designLoading}
@@ -182,9 +194,9 @@ const ProjectDetail = () => {
             {designLoading && <p>AI가 설계를 생성 중입니다...</p>}
             {designError && <p className="error">오류: {designError}</p>}
             {designImageUrl ? (
-              <img 
-                src={designImageUrl} 
-                alt="Generated design" 
+              <img
+                src={designImageUrl}
+                alt="Generated design"
                 style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
               />
             ) : (
@@ -199,35 +211,35 @@ const ProjectDetail = () => {
           <div className="finance-grid">
             <div className="finance-item">
               <label>토지 매입 비용</label>
-              <value>{(project.landCost || 0).toLocaleString()} 원</value>
+              <span>{(project.landCost || 0).toLocaleString()} 원</span>
             </div>
             <div className="finance-item">
               <label>건설 비용</label>
-              <value>{(project.constructionCost || 0).toLocaleString()} 원</value>
+              <span>{(project.constructionCost || 0).toLocaleString()} 원</span>
             </div>
             <div className="finance-item">
               <label>총 투자 비용</label>
-              <value>{totalCost.toLocaleString()} 원</value>
+              <span>{totalCost.toLocaleString()} 원</span>
             </div>
             <div className="finance-item">
               <label>예상 매각가</label>
-              <value>{(project.expectedSalePrice || 0).toLocaleString()} 원</value>
+              <span>{(project.expectedSalePrice || 0).toLocaleString()} 원</span>
             </div>
             <div className="finance-item">
               <label>예상 수익</label>
-              <value>{profit.toLocaleString()} 원</value>
+              <span>{profit.toLocaleString()} 원</span>
             </div>
             <div className="finance-item">
               <label>수익률 (ROI)</label>
-              <value>{roi.toFixed(2)} %</value>
+              <span>{roi.toFixed(2)} %</span>
             </div>
             <div className="finance-item">
               <label>대출 금리</label>
-              <value>{project.loanRate} %</value>
+              <span>{project.loanRate} %</span>
             </div>
             <div className="finance-item">
               <label>대출 기간</label>
-              <value>{project.loanTerm} 년</value>
+              <span>{project.loanTerm} 년</span>
             </div>
           </div>
           <div className="finance-actions">
@@ -254,34 +266,45 @@ const ProjectDetail = () => {
           <div className="compliance-checks">
             <div className="check-item">
               <h4>용도지역 확인</h4>
-              <p><span className="status-pass">통과</span> - 해당 지역의 용도지역이 프로젝트 유형과 일치합니다.</p>
+              <p>
+                <span className="status-pass">통과</span> - 해당 지역의 용도지역이
+                프로젝트 유형과 일치합니다.
+              </p>
             </div>
             <div className="check-item">
               <h4>건물 높이 제한</h4>
               <p>
-                <span className={
-                  project.buildingHeight && project.buildingHeight > 30
-                    ? 'status-warning'
-                    : 'status-pass'
-                }>
-                  {project.buildingHeight && project.buildingHeight > 30 ? '경고' : '통과'}
-                </span>
-                - 건물 높이가 {project.buildingHeight}m로, 지역 제한 {
-                  project.buildingHeight && project.buildingHeight > 30
-                    ? '을 초과하여'
-                    : '을 준수합니다'}
+                <span
+                  className={
+                    project.buildingHeight && project.buildingHeight > 30
+                      ? 'status-warning'
+                      : 'status-pass'
+                  }
+                >
+                  {project.buildingHeight && project.buildingHeight > 30
+                    ? '경고'
+                    : '통과'}
+                </span>{' '}
+                - 건물 높이가 {project.buildingHeight}m로, 지역 제한{' '}
+                {project.buildingHeight && project.buildingHeight > 30
+                  ? '을 초과하여'
+                  : '을 준수합니다'}
                 .
               </p>
             </div>
             <div className="check-item">
               <h4>이격거리 기준</h4>
-              <p><span className="status-pass">통과</span> - 건물 간 이격거리가 법적 기준을 충족합니다.</p>
+              <p>
+                <span className="status-pass">통과</span> - 건물 간 이격거리가 법적
+                기준을 충족합니다.
+              </p>
             </div>
             <div className="check-item">
               <h4>주차장 요구사항</h4>
-              <p><span className="status-info">참고</span> - 예상 주차 대수: {
-                Math.floor((project.landArea || 0) * 0.2)
-              } 대</p>
+              <p>
+                <span className="status-info">참고</span> - 예상 주차 대수:{' '}
+                {Math.floor((project.landArea || 0) * 0.2)} 대
+              </p>
             </div>
           </div>
           <button className="btn-primary">상세 법규 보고서 다운로드</button>
