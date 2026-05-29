@@ -1,0 +1,80 @@
+# AI 부동산 플랫폼 - 주간 데이터 크롤링 워크플로우
+# 매주 월요일 09:00 KST (UTC 00:00 일요일) 실행
+# 공공데이터 + VWorld 데이터 수집 후 data/ 디렉터리에 CSV 커밋
+
+name: 주간 부동산 데이터 크롤링
+
+on:
+  schedule:
+    # 매주 일요일 00:00 UTC = 월요일 09:00 KST
+    - cron: "0 0 * * 0"
+  workflow_dispatch: # 수동 실행 지원
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  crawl-public-data:
+    name: 공공데이터 크롤링
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Python 의존성 설치
+        run: |
+          pip install --upgrade pip
+          pip install -r infra/requirements.txt
+
+      - name: data 디렉터리 생성
+        run: mkdir -p data/raw
+
+      - name: 공공데이터 크롤링 실행
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+        run: |
+          cd infra
+          python crawlers/public_data.py --type all --year $(date +%Y)
+
+      - name: VWorld 데이터 크롤링 실행
+        env:
+          VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
+        run: |
+          cd infra
+          python crawlers/vworld_csv.py --type all --year $(date +%Y)
+
+      - name: 수집 결과 확인
+        run: |
+          echo "=== 수집된 파일 목록 ==="
+          ls -lh data/raw/ || echo "수집된 파일이 없습니다."
+          echo ""
+          echo "=== 파일 크기 요약 ==="
+          du -sh data/raw/ || echo "데이터 디렉터리가 비어있습니다."
+
+      - name: Git 사용자 설정
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: 수집 데이터 커밋
+        run: |
+          git add data/raw/*.csv 2>/dev/null || echo "커밋할 CSV 파일 없음"
+          if git diff --staged --quiet; then
+            echo "변경된 데이터 없음 - 커밋 생략"
+          else
+            git commit -m "📊 주간 데이터 크롤링 결과 ($(date +%Y-%m-%d))"
+            git push
+          fi
+
+      - name: 크롤링 실패 시 알림
+        if: failure()
+        run: |
+          echo "❌ 크롤링 실패! 로그를 확인하세요."
+          echo "실패 시간: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

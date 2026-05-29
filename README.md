@@ -1,156 +1,169 @@
 # 🏠 AI 부동산 플랫폼
 
-AI 기반 부동산 분석 및 시장 예측 플랫폼입니다. 공공데이터와 VWorld 데이터를 자동 수집하여 부동산 시장 인사이트를 제공합니다.
+공공데이터(실거래가, 건축물대장)와 VWorld(토지/건물) 데이터를 자동 수집하여 부동산 시장 인사이트를 제공하는 AI 기반 부동산 분석 플랫폼입니다.
 
 ## 🎯 프로젝트 비전
 
-- **데이터 기반 부동산 분석**: 공공데이터(실거래가, 건축물대장)와 VWorld(토지/건물) 데이터를 자동 수집
-- **AI 시장 예측**: 수집된 데이터를 기반으로 부동산 시장 트렌드 분석 및 예측
-- **사용자 친화적 대시보드**: 직관적인 프론트엔드로 복잡한 데이터를 쉽게 이해
+- **데이터 기반 부동산 분석**: 공공데이터 + VWorld 데이터 자동 수집 → 실거래가 트렌드, 건축물 정보 제공
+- **AI 시장 예측**: 수집 데이터 기반 부동산 시장 트렌드 분석 및 예측
+- **지도 기반 매물 탐색**: 네이버 지도 위 매물 마커 → 클릭 시 상세 모달
+- **사용자 친화적 대시보드**: 직관적인 UI로 복잡한 데이터를 쉽게 이해
 
 ## 🛠 기술 스택
 
-### 프론트엔드
-- **React** + **Vite** — 빠른 개발 및 HMR
-- **React Router** — SPA 라우팅
-
-### 백엔드
-- **Node.js** + **Express** — REST API 서버
-- **FAL AI** — AI 모델 연동
-
-### 인프라 / 데이터 파이프라인
-- **Python 3.10+** — 데이터 크롤러
-- **requests** — HTTP 요청
-- **BeautifulSoup4** — HTML 파싱
-- **pandas** — 데이터 처리 및 CSV 저장
-- **python-dotenv** — 환경변수 관리
-- **GitHub Actions** — 주간 자동 크롤링 워크플로우
+| 영역 | 기술 | 용도 |
+|------|------|------|
+| 프론트엔드 | React 19 + Vite | 빠른 개발 및 HMR |
+| | React Router 7 | SPA 라우팅 |
+| | Tailwind CSS 4 | 유틸리티 퍼스트 스타일링 |
+| | 네이버 지도 API | 지도 기반 매물 탐색 |
+| | Axios | HTTP 클라이언트 (JWT 자동 첨부) |
+| 백엔드 | Node.js + Express | REST API 서버 |
+| | PostgreSQL 16 | 관계형 데이터베이스 |
+| | JWT + bcryptjs | 인증/인가 |
+| | pg | PostgreSQL 클라이언트 |
+| 인프라 | Docker Compose | PostgreSQL + Adminer |
+| | Python 3.11 | 데이터 크롤러 |
+| | pandas | 데이터 처리 및 CSV 저장 |
+| | GitHub Actions | 주간 자동 크롤링 |
 
 ## 📁 디렉터리 구조
 
 ```
 ai-realestate-platform/
-├── README.md                       # 프로젝트 문서
-├── .gitignore                      # Git 제외 파일
-├── .env                            # 환경변수 (Git 추적 제외)
-├── frontend/                       # React 프론트엔드
+├── docker-compose.yml              # PostgreSQL + Adminer
+├── .github/workflows/
+│   └── crawl-weekly.yml            # 주간 자동 크롤링
+├── backend/
+│   ├── server.js                   # Express 서버 (/health, /api/auth, /api/properties)
+│   ├── db.js                       # PostgreSQL 연결 풀
+│   ├── db/init.sql                  # DB 스키마 + 시드 데이터
+│   ├── middleware/auth.js           # JWT 인증 미들웨어
+│   ├── routes/auth.js              # 로그인/회원가입 엔드포인트
+│   ├── routes/properties.js         # 매물 조회 엔드포인트
+│   ├── .env.example                # 백엔드 환경변수 예시
+│   └── package.json
+├── frontend/
 │   ├── src/
-│   │   ├── App.jsx                 # 루트 컴포넌트
-│   │   ├── main.jsx                # 진입점
-│   │   ├── Dashboard.jsx           # 대시보드 페이지
-│   │   ├── NewProject.jsx          # 신규 프로젝트 페이지
-│   │   └── ProjectDetail.jsx       # 프로젝트 상세 페이지
-│   ├── vite.config.js
+│   │   ├── App.jsx                  # 라우트 정의
+│   │   ├── main.jsx                 # 진입점
+│   │   ├── api/client.js            # Axios 인스턴스 (JWT 자동 첨부)
+│   │   ├── components/
+│   │   │   ├── Layout.jsx           # Header + Footer 레이아웃
+│   │   │   └── PropertyModal.jsx    # 매물 상세 모달
+│   │   └── pages/
+│   │       ├── HomePage.jsx         # 랜딩 페이지
+│   │       ├── LoginPage.jsx        # 로그인
+│   │       ├── SignupPage.jsx       # 회원가입
+│   │       ├── MapPage.jsx          # 네이버 지도 + 매물 마커
+│   │       └── PropertyDetailPage.jsx  # 매물 상세 페이지
+│   ├── .env.example                # 프론트엔드 환경변수 예시
 │   └── package.json
-├── backend/                        # Express 백엔드
-│   ├── server.js                   # API 서버
-│   └── package.json
-├── infra/                          # 인프라 및 데이터 파이프라인
-│   ├── crawlers/                   # 데이터 크롤러
-│   │   ├── public_data.py          # 공공데이터 API 크롤러
-│   │   └── vworld_csv.py           # VWorld CSV 크롤러
-│   ├── github-actions/             # GitHub Actions 워크플로우
-│   │   └── crawl-weekly.yml        # 주간 크롤링 워크플로우
+├── infra/
+│   ├── crawlers/
+│   │   ├── public_data.py          # 공공데이터 API 크롤러 (실거래가, 건축물대장)
+│   │   └── vworld_csv.py           # VWorld CSV 크롤러 (토지/건물)
+│   ├── github-actions/
+│   │   └── crawl-weekly.yml        # 참조용 워크플로우
 │   └── requirements.txt            # Python 의존성
-└── data/                           # 수집된 데이터 (Git 추적 제외)
-    └── raw/                        # 원본 CSV 파일
+└── data/
+    └── raw/                        # 수집 CSV (Git 추적 제외)
 ```
 
 ## 🔑 환경변수
 
-프로젝트 루트에 `.env` 파일을 생성하세요:
+### 백엔드 (`backend/.env`)
 
 ```env
-# 공공데이터 API 키 (data.go.kr 발급)
-PUBLIC_DATA_API_KEY=your_public_data_api_key_here
-
-# VWorld API 키 (vworld.kr 발급)
-VWORLD_API_KEY=your_vworld_api_key_here
-
-# FAL AI API 키
-FAL_API_KEY=your_fal_api_key_here
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=realestate
+DB_USER=postgres
+DB_PASSWORD=postgres
+JWT_SECRET=your_jwt_secret_here
+PORT=3001
+PUBLIC_DATA_API_KEY=your_public_data_api_key
+VWORLD_API_KEY=your_vworld_api_key
 ```
 
-### API 키 발급 방법
+### 프론트엔드 (`frontend/.env`)
+
+```env
+VITE_NAVER_MAP_CLIENT_ID=your_naver_map_client_id
+VITE_API_URL=http://localhost:3001
+```
+
+### API 키 발급처
 
 | 환경변수 | 발급처 | 용도 |
 |----------|--------|------|
-| `PUBLIC_DATA_API_KEY` | [data.go.kr](https://www.data.go.kr) | 실거래가, 건축물대장 조회 |
-| `VWORLD_API_KEY` | [vworld.kr](https://www.vworld.kr) | 토지/건물 데이터 다운로드 |
-| `FAL_API_KEY` | [fal.ai](https://fal.ai) | AI 모델 호출 |
+| `PUBLIC_DATA_API_KEY` | [data.go.kr](https://www.data.go.kr) | 실거래가, 건축물대장 |
+| `VWORLD_API_KEY` | [vworld.kr](https://www.vworld.kr) | 토지/건물 데이터 |
+| `VITE_NAVER_MAP_CLIENT_ID` | [Naver Cloud Platform](https://www.ncloud.com) | 네이버 지도 |
 
 ## 🚀 실행 방법
 
-### 1. 저장소 클론
+### 1. 클론 & 환경변수 설정
 
 ```bash
-git clone https://github.com/your-org/ai-realestate-platform.git
+git clone https://github.com/rbcaglobalsg/ai-realestate-platform.git
 cd ai-realestate-platform
+
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+# 각 .env 파일에 API 키 입력
 ```
 
-### 2. 환경변수 설정
+### 2. Docker로 DB 실행
 
 ```bash
-cp .env.example .env
-# .env 파일을 열어 API 키 입력
+docker compose up -d
+# PostgreSQL: localhost:5432 / Adminer: http://localhost:8080
 ```
 
-### 3. 프론트엔드 실행
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 4. 백엔드 실행
+### 3. 백엔드 실행
 
 ```bash
 cd backend
 npm install
 node server.js
+# 서버: http://localhost:3001/health
 ```
 
-### 5. 데이터 크롤러 실행 (수동)
+### 4. 프론트엔드 실행
 
 ```bash
-cd infra
-pip install -r requirements.txt
-
-# 공공데이터 크롤링
-python crawlers/public_data.py
-
-# VWorld 데이터 크롤링
-python crawlers/vworld_csv.py
+cd frontend
+npm install
+npm run dev
+# 앱: http://localhost:5173
 ```
 
-## 📡 API 엔드포인트 목록
+### 5. 데이터 크롤러 (수동)
 
-### 백엔드 API
+```bash
+pip install -r infra/requirements.txt
+python infra/crawlers/public_data.py --type all --year 2025
+python infra/crawlers/vworld_csv.py --type all --year 2025
+```
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `GET` | `/api/health` | 서버 상태 확인 |
-| `GET` | `/api/projects` | 프로젝트 목록 조회 |
-| `POST` | `/api/projects` | 신규 프로젝트 생성 |
-| `GET` | `/api/projects/:id` | 프로젝트 상세 조회 |
-| `DELETE` | `/api/projects/:id` | 프로젝트 삭제 |
+## 📡 API 엔드포인트
 
-### 외부 데이터 API
-
-| API | 설명 |
-|-----|------|
-| 국토교통부 실거래가 API | 아파트/단독다가구/연립다세대 매매 실거래가 |
-| 건축물대장 API | 건축물 정보 및 대장 데이터 |
-| VWorld 데이터 API | 월간 토지/건물 데이터 CSV |
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|------|------|
+| `GET` | `/health` | ❌ | 서버 + DB 상태 확인 |
+| `POST` | `/api/auth/signup` | ❌ | 회원가입 (email, password, name) |
+| `POST` | `/api/auth/login` | ❌ | 로그인 → JWT 반환 |
+| `GET` | `/api/properties` | ✅ | 매물 목록 조회 |
+| `GET` | `/api/properties/:id` | ✅ | 매물 상세 조회 |
 
 ## 📅 자동 크롤링
 
-GitHub Actions를 통해 매주 월요일 09:00 KST에 공공데이터와 VWorld 데이터를 자동 수집합니다.
+GitHub Actions로 **매주 월요일 09:00 KST** 공공데이터 + VWorld 데이터 자동 수집 → `data/raw/`에 CSV 커밋
 
-- 워크플로우 파일: `.github/workflows/crawl-weekly.yml`
-- 수집 결과는 `data/` 디렉터리에 CSV로 자동 커밋됩니다
+- 워크플로우: `.github/workflows/crawl-weekly.yml`
+- GitHub Secrets에 `PUBLIC_DATA_API_KEY`, `VWORLD_API_KEY` 등록 필요
 
 ## 📜 라이선스
 
-Private Repository — 사내 프로젝트
+Private Repository — RBCA Global Pte. Ltd.
