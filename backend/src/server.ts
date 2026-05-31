@@ -4,6 +4,10 @@ dotenv.config();
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { fal } from '@fal-ai/client';
+import authRoutes from './routes/auth';
+import projectRoutes from './routes/projects';
+import publicDataRoutes from './routes/public-data';
+import paymentRoutes from './routes/payments';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,25 +15,43 @@ const PORT = process.env.PORT || 3001;
 // Configure FAL client
 fal.config({ credentials: process.env.FAL_API_KEY });
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Health check
+// ==================== Health Check ====================
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-// Health check (api prefix)
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '2.0.0',
+    services: {
+      database: process.env.DATABASE_URL ? 'configured' : 'not_configured',
+      fal: process.env.FAL_API_KEY ? 'configured' : 'not_configured',
+      publicData: process.env.PUBLIC_DATA_API_KEY ? 'configured' : 'not_configured',
+      vworld: process.env.VWORLD_API_KEY ? 'configured' : 'not_configured',
+      toss: process.env.TOSS_SECRET_KEY ? 'configured' : 'not_configured',
+    },
+  });
 });
 
-// Types for API requests
-interface DesignRequest {
-  prompt: string;
-  type?: 'image' | '3d' | 'video';
-  model?: string;
-}
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '2.0.0',
+  });
+});
 
+// ==================== API Routes ====================
+app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/public', publicDataRoutes);
+app.use('/api/payments', paymentRoutes);
+
+// ==================== Legacy Compatibility Endpoints ====================
+
+// Finance endpoint (standalone, no auth required for backward compat)
 interface FinanceRequest {
   landCost?: number;
   constructionCost?: number;
@@ -38,93 +60,38 @@ interface FinanceRequest {
   loanTerm?: number;
 }
 
-interface MarketingRequest {
-  projectName: string;
-  description?: string;
-  targetAudience?: string;
-}
-
-interface ComplianceRequest {
-  location?: string;
-  projectType?: string;
-  landArea?: number;
-  buildingHeight?: number;
-}
-
-interface FalImageResult {
-  data?: {
-    images?: Array<{ url: string }>;
-  };
-}
-
-// Design endpoint - text to image/3D placeholder
-app.post('/api/design', async (req: Request, res: Response) => {
-  try {
-    const { prompt, type = 'image', model } = req.body as DesignRequest;
-
-    if (type === 'image') {
-      // Call FAL API for image generation
-      const falModel = 'fal-ai/fast-sdxl';
-
-      const result = await fal.subscribe(falModel, {
-        input: {
-          prompt: prompt,
-          image_size: { width: 1024, height: 1024 },
-          num_inference_steps: 20,
-          guidance_scale: 7.5,
-          num_images: 1,
-          enable_safety_checker: true,
-        },
-        logs: true,
-      }) as FalImageResult;
-
-      const imageUrl = result.data?.images?.[0]?.url;
-
-      if (!imageUrl) {
-        throw new Error('No image URL returned from FAL API');
-      }
-
-      res.json({
-        success: true,
-        data: {
-          id: `design_${Date.now()}`,
-          prompt,
-          type,
-          model: falModel,
-          resultUrl: imageUrl,
-          createdAt: new Date().toISOString(),
-        },
-      });
-    } else {
-      // For non-image types (3D, video, etc.) return placeholder for now
-      res.json({
-        success: true,
-        data: {
-          id: `design_${Date.now()}`,
-          prompt,
-          type,
-          model: model || 'default',
-          resultUrl: `https://example.com/mock-${type}-${Date.now()}.png`,
-          createdAt: new Date().toISOString(),
-        },
-      });
-    }
-  } catch (error) {
-    const err = error as Error;
-    console.error('Design endpoint error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Finance endpoint - business analysis placeholder
 app.post('/api/finance', async (req: Request, res: Response) => {
   try {
     const { landCost, constructionCost, expectedSalePrice, loanRate, loanTerm } =
       req.body as FinanceRequest;
-    // Simple calculations for demonstration
+
     const totalCost = (landCost || 0) + (constructionCost || 0);
     const profit = (expectedSalePrice || 0) - totalCost;
     const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+
+    // Calculate monthly loan payment if loan details provided
+    let monthlyPayment = 0;
+    const principal = totalCost;
+    const monthlyRate = (loanRate || 0) / 100 / 12;
+    const totalMonths = (loanTerm || 0) * 12;
+
+    if (principal > 0 && monthlyRate > 0 && totalMonths > 0) {
+      // Amortization formula
+      monthlyPayment =
+        (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) /
+        (Math.pow(1 + monthlyRate, totalMonths) - 1);
+    }
+
+    // Profit margin
+    const profitMargin = (expectedSalePrice || 0) > 0
+      ? (profit / (expectedSalePrice || 0)) * 100
+      : 0;
+
+    // Break-even price
+    const breakEvenPrice = totalCost;
+
+    // IRR estimation (simplified)
+    const irrEstimate = roi > 0 ? roi / (loanTerm || 1) : 0;
 
     res.json({
       success: true,
@@ -134,11 +101,15 @@ app.post('/api/finance', async (req: Request, res: Response) => {
         totalCost,
         expectedSalePrice: expectedSalePrice || 0,
         profit,
+        profitMargin: parseFloat(profitMargin.toFixed(2)),
         roi: parseFloat(roi.toFixed(2)),
+        irrEstimate: parseFloat(irrEstimate.toFixed(2)),
+        breakEvenPrice,
         loanDetails: {
           loanRate: loanRate || 0,
           loanTerm: loanTerm || 0,
-          monthlyPayment: 0, // placeholder
+          monthlyPayment: Math.round(monthlyPayment),
+          totalInterest: Math.round(monthlyPayment * totalMonths - principal),
         },
         analysisDate: new Date().toISOString(),
       },
@@ -150,7 +121,13 @@ app.post('/api/finance', async (req: Request, res: Response) => {
   }
 });
 
-// Marketing endpoint - content generation placeholder
+// Marketing endpoint (standalone)
+interface MarketingRequest {
+  projectName: string;
+  description?: string;
+  targetAudience?: string;
+}
+
 app.post('/api/marketing', async (req: Request, res: Response) => {
   try {
     const { projectName, description, targetAudience } = req.body as MarketingRequest;
@@ -169,7 +146,7 @@ app.post('/api/marketing', async (req: Request, res: Response) => {
             'strong investment returns projected',
             'flexible financing options available',
           ],
-          callToAction: '지금바로투자상담을신청하세요',
+          callToAction: '지금 바로 투자 상담을 신청하세요',
           socialMediaSnippets: {
             twitter: `Check out ${projectName}! Amazing opportunity. #RealEstate #Investment`,
             instagram: `Discover ${projectName} - where luxury meets value. ✨`,
@@ -185,11 +162,18 @@ app.post('/api/marketing', async (req: Request, res: Response) => {
   }
 });
 
-// Compliance endpoint - regulatory check placeholder
+// Compliance endpoint (standalone)
+interface ComplianceRequest {
+  location?: string;
+  projectType?: string;
+  landArea?: number;
+  buildingHeight?: number;
+}
+
 app.post('/api/compliance', async (req: Request, res: Response) => {
   try {
     const { location, projectType, landArea, buildingHeight } = req.body as ComplianceRequest;
-    // Mock compliance checks
+
     const checks = [
       {
         id: 'zoning',
@@ -215,6 +199,12 @@ app.post('/api/compliance', async (req: Request, res: Response) => {
         status: 'info',
         description: '소규모 프로젝트로 환경영향평가는 면제 대상입니다.',
       },
+      {
+        id: 'parking',
+        name: '주차장 요구사항',
+        status: 'info',
+        description: `예상 주차 대수: ${Math.floor((landArea || 0) * 0.2)} 대`,
+      },
     ];
 
     const allPass = checks.every((c) => c.status === 'pass' || c.status === 'info');
@@ -238,6 +228,12 @@ app.post('/api/compliance', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== Server Start ====================
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 AI 부동산 플랫폼 백엔드 서버 v2.0 — 포트 ${PORT}`);
+  console.log(`📋 Health: http://localhost:${PORT}/health`);
+  console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
+  console.log(`📊 Projects: http://localhost:${PORT}/api/projects`);
+  console.log(`🏛️ Public Data: http://localhost:${PORT}/api/public`);
+  console.log(`💳 Payments: http://localhost:${PORT}/api/payments`);
 });
